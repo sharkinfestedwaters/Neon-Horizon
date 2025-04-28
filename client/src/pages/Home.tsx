@@ -18,10 +18,6 @@ export default function Home() {
       <div className="container mx-auto py-8 px-4">
         <header className="mb-6 relative">
           <div className="absolute right-0 top-0 flex items-center">
-            <span className="text-cyan-300 mr-2 hidden md:flex items-center gap-1">
-              <UserCircle className="h-4 w-4" />
-              {user?.username}
-            </span>
             <Button 
               variant="ghost" 
               size="sm" 
