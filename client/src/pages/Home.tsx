@@ -2,14 +2,42 @@ import React from "react";
 import CharacterSheet from "@/components/CharacterSheet";
 import CharacterList from "@/components/CharacterList";
 import Notification from "@/components/Notification";
+import { useAuth } from "@/hooks/use-auth";
+import { Button } from "@/components/ui/button";
+import { LogOut, UserCircle } from "lucide-react";
 
 export default function Home() {
+  const { user, logoutMutation } = useAuth();
+  
+  const handleLogout = () => {
+    logoutMutation.mutate();
+  };
+  
   return (
     <div className="bg-[#080A14] min-h-screen grid-bg text-white font-sans relative">
       <div className="container mx-auto py-8 px-4">
-        <header className="mb-6 text-center">
-          <h1 className="text-4xl font-bold text-cyan-400 tracking-tight">Neon Horizons</h1>
-          <p className="text-cyan-300/70">Character Creator</p>
+        <header className="mb-6 relative">
+          <div className="absolute right-0 top-0 flex items-center">
+            <span className="text-cyan-300 mr-2 hidden md:flex items-center gap-1">
+              <UserCircle className="h-4 w-4" />
+              {user?.username}
+            </span>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-cyan-400 hover:text-cyan-300 hover:bg-cyan-900/30"
+              onClick={handleLogout}
+              disabled={logoutMutation.isPending}
+            >
+              <LogOut className="h-4 w-4 mr-1" />
+              {logoutMutation.isPending ? "Logging out..." : "Logout"}
+            </Button>
+          </div>
+          
+          <div className="text-center">
+            <h1 className="text-4xl font-bold text-cyan-400 tracking-tight">Neon Horizons</h1>
+            <p className="text-cyan-300/70">Character Creator</p>
+          </div>
         </header>
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

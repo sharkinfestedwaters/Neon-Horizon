@@ -29,6 +29,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/characters', isAuthenticated, async (req, res) => {
     try {
       const userId = req.user?.id;
+      if (userId === undefined) {
+        return res.status(401).json({ error: 'User ID not available' });
+      }
       const characters = await storage.getCharactersByUserId(userId);
       res.json(characters);
     } catch (error) {
@@ -75,7 +78,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Set the user ID to the logged-in user
-      const characterData = { ...result.data, userId: req.user?.id };
+      const userId = req.user?.id;
+      if (userId === undefined) {
+        return res.status(401).json({ error: 'User ID not available' });
+      }
+      const characterData = { ...result.data, userId };
       const character = await storage.createCharacter(characterData);
       res.status(201).json(character);
     } catch (error) {

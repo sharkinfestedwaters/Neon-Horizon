@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import AuthPage from "@/pages/auth-page";
+import ExportCharacter from "@/pages/export-character";
 import { CharacterProvider } from "./context/CharacterContext";
 import { AuthProvider } from "./hooks/use-auth";
 import { ProtectedRoute } from "./components/protected-route";
@@ -14,6 +15,7 @@ function Router() {
   return (
     <Switch>
       <ProtectedRoute path="/" component={Home} />
+      <ProtectedRoute path="/export-character/:id" component={ExportCharacter} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>

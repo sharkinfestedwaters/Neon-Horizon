@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { Character, Stats, RaceName, FeatureName, StatName } from "@/types/character";
 import { races, features, calculateTotalStats } from "@/utils/characterUtils";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient, getQueryFn } from "@/lib/queryClient";
 import { useQuery, useMutation } from "@tanstack/react-query";
 
 // Initial character state
@@ -71,17 +71,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   // Fetch characters from the API
   const { data: characters = [], isLoading } = useQuery<DatabaseCharacter[]>({
     queryKey: ['/api/characters'],
-    onSuccess: (data) => {
-      console.log('Characters loaded:', data.length);
-    },
-    onError: (err: Error) => {
-      console.error('Failed to fetch characters:', err);
-      toast({
-        title: "Failed to load characters",
-        description: "Couldn't retrieve your characters from the database",
-        variant: "destructive",
-      });
-    }
+    queryFn: getQueryFn({ on401: "returnNull" })
   });
 
   // Create character mutation
@@ -161,7 +151,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   // Load from localStorage on initial render (for backward compatibility)
   useEffect(() => {
     const savedCharacter = localStorage.getItem("character");
-    if (savedCharacter && characters.length === 0) {
+    if (savedCharacter && Array.isArray(characters) && characters.length === 0) {
       try {
         setCharacter(JSON.parse(savedCharacter));
         toast({
@@ -172,7 +162,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         console.error("Failed to parse saved character:", error);
       }
     }
-  }, [characters.length]);
+  }, [characters, toast]);
 
   // Calculate total stats with race and feature bonuses
   const totalStats = calculateTotalStats(character);
