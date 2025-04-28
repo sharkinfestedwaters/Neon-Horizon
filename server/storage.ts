@@ -123,18 +123,32 @@ export class MemStorage implements IStorage {
   async getCharactersByUserId(userId: number): Promise<Character[]> {
     return Array.from(this.characters.values())
       .filter(character => character.userId === userId)
-      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+      .sort((a, b) => {
+        const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+        const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+        return dateB - dateA;
+      });
   }
 
   async createCharacter(characterData: InsertCharacter): Promise<Character> {
     const id = this.characterCurrentId++;
     const now = new Date().toISOString();
+    
+    // Ensure all required fields are present
     const character: Character = { 
-      ...characterData, 
       id,
+      name: characterData.name,
+      userId: characterData.userId || null,
+      level: characterData.level || 1,
+      race: characterData.race || null,
+      feature: characterData.feature || null,
+      notes: characterData.notes || "",
+      pointsAvailable: characterData.pointsAvailable || 5,
+      baseStats: characterData.baseStats,
       createdAt: now,
       updatedAt: now
     };
+    
     this.characters.set(id, character);
     return character;
   }
