@@ -176,6 +176,18 @@ export type InsertRace = z.infer<typeof insertRaceSchema>;
 export type UpdateRace = z.infer<typeof updateRaceSchema>;
 export type Race = typeof races.$inferSelect;
 
+// Race relations
+export const racesRelations = relations(races, ({ one, many }) => ({
+  creator: one(users, {
+    fields: [races.createdBy],
+    references: [users.id]
+  }),
+  characters: many(characters, {
+    fields: [races.id],
+    references: [characters.raceId]
+  })
+}));
+
 // Features table to formalize features instead of storing as string
 export const features = pgTable("features", {
   id: serial("id").primaryKey(),
@@ -208,6 +220,18 @@ export const updateFeatureSchema = createInsertSchema(features).pick({
 export type InsertFeature = z.infer<typeof insertFeatureSchema>;
 export type UpdateFeature = z.infer<typeof updateFeatureSchema>;
 export type Feature = typeof features.$inferSelect;
+
+// Feature relations
+export const featuresRelations = relations(features, ({ one, many }) => ({
+  creator: one(users, {
+    fields: [features.createdBy],
+    references: [users.id]
+  }),
+  characters: many(characters, {
+    fields: [features.id],
+    references: [characters.featureId]
+  })
+}));
 
 // Item table for defining equipment and inventory items
 export const items = pgTable("items", {
@@ -341,12 +365,25 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   characters: many(characters),
   modifiedSettings: many(gameSettings),
   createdItems: many(items, { relationName: 'creator' }),
-  createdSkills: many(skills, { relationName: 'creator' })
+  createdSkills: many(skills, { relationName: 'creator' }),
+  createdRaces: many(races, { relationName: 'creator' }),
+  createdFeatures: many(features, { relationName: 'creator' })
 }));
 
 // Character relations
 export const charactersRelations = relations(characters, ({ one, many }) => ({
-  user: one(users),
+  user: one(users, {
+    fields: [characters.userId],
+    references: [users.id]
+  }),
+  race: one(races, {
+    fields: [characters.raceId],
+    references: [races.id]
+  }),
+  feature: one(features, {
+    fields: [characters.featureId], 
+    references: [features.id]
+  }),
   inventory: many(characterInventory),
   skills: many(characterSkills)
 }));
