@@ -5,12 +5,16 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
+import AuthPage from "@/pages/auth-page";
 import { CharacterProvider } from "./context/CharacterContext";
+import { AuthProvider } from "./hooks/use-auth";
+import { ProtectedRoute } from "./components/protected-route";
 
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Home} />
+      <ProtectedRoute path="/" component={Home} />
+      <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -20,10 +24,12 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <CharacterProvider>
-          <Toaster />
-          <Router />
-        </CharacterProvider>
+        <AuthProvider>
+          <CharacterProvider>
+            <Toaster />
+            <Router />
+          </CharacterProvider>
+        </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );
