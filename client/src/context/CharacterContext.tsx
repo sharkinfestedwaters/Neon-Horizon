@@ -69,10 +69,13 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const { toast } = useToast();
 
   // Fetch characters from the API
-  const { data: characters = [], isLoading } = useQuery({
+  const { data: characters = [], isLoading } = useQuery<DatabaseCharacter[]>({
     queryKey: ['/api/characters'],
-    onError: (error) => {
-      console.error('Failed to fetch characters:', error);
+    onSuccess: (data) => {
+      console.log('Characters loaded:', data.length);
+    },
+    onError: (err: Error) => {
+      console.error('Failed to fetch characters:', err);
       toast({
         title: "Failed to load characters",
         description: "Couldn't retrieve your characters from the database",
@@ -324,7 +327,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
   
   const loadCharacter = (id: number) => {
-    const characterToLoad = characters.find(c => c.id === id);
+    const characterToLoad = (characters as DatabaseCharacter[]).find((c: DatabaseCharacter) => c.id === id);
     if (!characterToLoad) {
       toast({
         title: "Character not found",
