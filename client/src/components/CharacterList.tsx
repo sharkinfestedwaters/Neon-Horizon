@@ -39,40 +39,53 @@ export default function CharacterList() {
 
   // Initialize WebSocket connection for real-time character sharing
   useEffect(() => {
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    // Only initialize WebSocket if the user is logged in
+    if (!user) return;
     
-    const socket = new WebSocket(wsUrl);
-    
-    socket.addEventListener('open', () => {
-      console.log('WebSocket connection established');
-      setWsConnection(socket);
-    });
-    
-    socket.addEventListener('message', (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        
-        if (data.type === 'shared-character') {
-          toast({
-            title: "Character Shared",
-            description: `${data.sharedBy} shared character "${data.character.name}"`,
-          });
+    try {
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const wsUrl = `${protocol}//${window.location.host}/ws`;
+      
+      const socket = new WebSocket(wsUrl);
+      
+      socket.addEventListener('open', () => {
+        console.log('WebSocket connection established');
+        setWsConnection(socket);
+      });
+      
+      socket.addEventListener('message', (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          
+          if (data.type === 'shared-character') {
+            toast({
+              title: "Character Shared",
+              description: `${data.sharedBy} shared character "${data.character.name}"`,
+            });
+          }
+        } catch (error) {
+          console.error('Failed to parse WebSocket message:', error);
         }
-      } catch (error) {
-        console.error('Failed to parse WebSocket message:', error);
-      }
-    });
-    
-    socket.addEventListener('close', () => {
-      console.log('WebSocket connection closed');
-      setWsConnection(null);
-    });
-    
-    return () => {
-      socket.close();
-    };
-  }, [toast]);
+      });
+      
+      socket.addEventListener('close', () => {
+        console.log('WebSocket connection closed');
+        setWsConnection(null);
+      });
+      
+      socket.addEventListener('error', (error) => {
+        console.error('WebSocket error:', error);
+      });
+      
+      return () => {
+        if (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING) {
+          socket.close();
+        }
+      };
+    } catch (error) {
+      console.error('Error initializing WebSocket:', error);
+    }
+  }, [toast, user]);
 
   // Function to export character as PDF
   const exportCharacter = (characterId: number) => {

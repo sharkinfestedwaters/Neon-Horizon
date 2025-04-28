@@ -6,7 +6,7 @@ export default function Notification() {
   return (
     <>
       <Toaster />
-      <style jsx global>{`
+      <style>{`
         .neo-border {
           border: 1px solid rgba(0, 229, 255, 0.3);
           box-shadow: 0 0 10px rgba(0, 163, 255, 0.2);
