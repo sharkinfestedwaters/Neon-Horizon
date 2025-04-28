@@ -37,6 +37,7 @@ export default function CharacterList() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const [wsConnection, setWsConnection] = useState<WebSocket | null>(null);
+  const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
 
   // Initialize WebSocket connection for real-time character sharing
   useEffect(() => {
@@ -69,6 +70,9 @@ export default function CharacterList() {
           character?: Character;
           message?: string;
           details?: any;
+          users?: string[];
+          action?: 'join' | 'leave';
+          username?: string;
         }
         
         socket.addEventListener('message', (event) => {
@@ -90,6 +94,43 @@ export default function CharacterList() {
                 
               case 'connection-established':
                 console.log('WebSocket service message:', data.message);
+                
+                // Register user with the WebSocket server
+                if (user?.username && socket) {
+                  socket.send(JSON.stringify({
+                    type: 'register-user',
+                    username: user.username
+                  }));
+                }
+                break;
+                
+              case 'register-confirmed':
+                console.log('Registration confirmed:', data.message);
+                break;
+                
+              case 'online-users':
+                if (data.users) {
+                  setOnlineUsers(data.users);
+                }
+                break;
+                
+              case 'user-status':
+                if (data.action && data.username) {
+                  // Handle user joining or leaving
+                  if (data.action === 'join') {
+                    toast({
+                      title: "User Joined",
+                      description: `${data.username} is now online`,
+                      variant: "default",
+                    });
+                  } else if (data.action === 'leave') {
+                    toast({
+                      title: "User Left",
+                      description: `${data.username} has gone offline`,
+                      variant: "default",
+                    });
+                  }
+                }
                 break;
                 
               case 'share-confirmed':
@@ -232,7 +273,28 @@ export default function CharacterList() {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-2xl font-bold">Your Characters</h2>
+        <div>
+          <h2 className="text-2xl font-bold">Your Characters</h2>
+          {onlineUsers.length > 0 && (
+            <div className="text-sm text-cyan-500 flex items-center mt-1">
+              <div className="h-2 w-2 rounded-full bg-green-500 mr-2"></div>
+              <span>{onlineUsers.length} user{onlineUsers.length !== 1 ? 's' : ''} online</span>
+              <div className="ml-2 relative group">
+                <span className="cursor-help text-cyan-400">(view)</span>
+                <div className="absolute left-0 top-full hidden group-hover:block z-10 bg-black/90 border border-cyan-900 rounded p-2 min-w-48 shadow-lg">
+                  <p className="text-xs text-cyan-400 mb-1 font-semibold">Online Users:</p>
+                  <ul className="text-xs">
+                    {onlineUsers.map((username, index) => (
+                      <li key={index} className="text-cyan-300">
+                        {username === user?.username ? `${username} (you)` : username}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
         <Button 
           variant="outline" 
           className="bg-cyan-900/20 border-cyan-500/50 hover:bg-cyan-900/40 text-cyan-300"

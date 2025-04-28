@@ -19,7 +19,76 @@ interface WebSocketSharedMessage {
   sharedBy?: string;
 }
 
-type WebSocketMessage = WebSocketShareMessage | WebSocketSharedMessage;
+interface WebSocketUserStatusMessage {
+  type: 'user-status';
+  action: 'join' | 'leave';
+  username: string;
+}
+
+interface WebSocketOnlineUsersMessage {
+  type: 'online-users';
+  users: string[];
+}
+
+type WebSocketMessage = 
+  | WebSocketShareMessage 
+  | WebSocketSharedMessage 
+  | WebSocketUserStatusMessage
+  | WebSocketOnlineUsersMessage;
+
+// Utility class to manage online users
+class OnlineUsersTracker {
+  private users: Map<WebSocket, string> = new Map();
+
+  addUser(ws: WebSocket, username: string): void {
+    if (!username) return;
+    
+    const previousUsername = this.users.get(ws);
+    if (previousUsername !== username) {
+      this.users.set(ws, username);
+      this.broadcastUserStatus(username, 'join');
+    }
+  }
+
+  removeUser(ws: WebSocket): string | undefined {
+    const username = this.users.get(ws);
+    if (username) {
+      this.users.delete(ws);
+      this.broadcastUserStatus(username, 'leave');
+    }
+    return username;
+  }
+
+  getOnlineUsers(): string[] {
+    // Get unique usernames in case a user has multiple connections
+    const uniqueUsers = new Set<string>();
+    this.users.forEach(username => {
+      uniqueUsers.add(username);
+    });
+    return Array.from(uniqueUsers);
+  }
+
+  private broadcastUserStatus(username: string, action: 'join' | 'leave'): void {
+    // This will be implemented later when we have the WebSocket server
+  }
+
+  setWebSocketServer(wss: WebSocketServer): void {
+    // Update the broadcast method to use the WebSocket server
+    this.broadcastUserStatus = (username: string, action: 'join' | 'leave') => {
+      const message: WebSocketUserStatusMessage = {
+        type: 'user-status',
+        action,
+        username
+      };
+      
+      wss.clients.forEach(client => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify(message));
+        }
+      });
+    };
+  }
+}
 
 // Middleware to check if a user is authenticated
 const isAuthenticated = (req: Request, res: Response, next: Function) => {
@@ -199,18 +268,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create WebSocket server for real-time character sharing
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
   
+  // Create an instance of the OnlineUsersTracker
+  const onlineUsers = new OnlineUsersTracker();
+  onlineUsers.setWebSocketServer(wss);
+  
   // Create a schema for validating WebSocket messages
   const shareMessageSchema = z.object({
     type: z.literal('share-character'),
     character: z.object({
       id: z.number(),
       name: z.string(),
+      userId: z.number().nullable(),
       level: z.number(),
-      // Other character fields could be validated here if needed
+      race: z.string().nullable(),
+      feature: z.string().nullable(),
+      notes: z.string().nullable(),
+      pointsAvailable: z.number(),
+      baseStats: z.unknown(),
+      createdAt: z.string().nullable(),
+      updatedAt: z.string().nullable()
     }),
     username: z.string().optional()
   });
-
+  
+  // Setup schema for user registration
+  const userRegisterSchema = z.object({
+    type: z.literal('register-user'),
+    username: z.string().min(1),
+  });
+  
   // Track connected clients
   const connectedClients = new Set<WebSocket>();
   
@@ -223,12 +309,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
       message: 'Connected to Neon Horizons sharing service'
     }));
     
+    // Send current online users list
+    ws.send(JSON.stringify({
+      type: 'online-users',
+      users: onlineUsers.getOnlineUsers()
+    }));
+    
     ws.on('message', async (message) => {
       try {
         const data = JSON.parse(message.toString());
         
-        // Validate share-character messages
-        if (data.type === 'share-character') {
+        // User registration
+        if (data.type === 'register-user') {
+          const result = userRegisterSchema.safeParse(data);
+          
+          if (result.success) {
+            // Register user
+            onlineUsers.addUser(ws, result.data.username);
+            
+            // Send updated user list to all clients
+            const userList: WebSocketOnlineUsersMessage = {
+              type: 'online-users',
+              users: onlineUsers.getOnlineUsers()
+            };
+            
+            wss.clients.forEach(client => {
+              if (client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify(userList));
+              }
+            });
+            
+            // Acknowledge successful registration
+            ws.send(JSON.stringify({
+              type: 'register-confirmed',
+              message: 'You are now connected as ' + result.data.username
+            }));
+          }
+        }
+        // Character sharing
+        else if (data.type === 'share-character') {
           const result = shareMessageSchema.safeParse(data);
           
           if (!result.success) {
@@ -289,20 +408,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     // Handle disconnections
     ws.on('close', () => {
+      // Remove user from online tracker
+      onlineUsers.removeUser(ws);
+      
+      // Remove from connected clients
       connectedClients.delete(ws);
     });
     
     ws.on('error', (error) => {
       console.error('WebSocket client error:', error);
+      
+      // Remove user from online tracker
+      onlineUsers.removeUser(ws);
+      
+      // Remove from connected clients
       connectedClients.delete(ws);
     });
   });
   
-  // Periodically cleanup dead connections
+  // Periodically cleanup dead connections and broadcast online users
   setInterval(() => {
     wss.clients.forEach(client => {
       if (client.readyState !== WebSocket.OPEN) {
+        onlineUsers.removeUser(client);
         connectedClients.delete(client);
+      }
+    });
+    
+    // Broadcast current online users list to all clients periodically
+    const userList: WebSocketOnlineUsersMessage = {
+      type: 'online-users',
+      users: onlineUsers.getOnlineUsers()
+    };
+    
+    wss.clients.forEach(client => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(JSON.stringify(userList));
       }
     });
   }, 30000); // Check every 30 seconds
