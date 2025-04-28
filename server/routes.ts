@@ -236,7 +236,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Add endpoint for PDF export
+  // Add endpoint for character ID card export
   app.get('/api/characters/:id/export', isAuthenticated, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
@@ -254,11 +254,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: 'You do not have permission to export this character' });
       }
 
-      // PDF export will be implemented client-side
+      // Image export will be implemented client-side
       res.json({ exportUrl: `/export-character/${id}` });
     } catch (error) {
       console.error('Error generating export:', error);
       res.status(500).json({ error: 'Failed to generate export' });
+    }
+  });
+  
+  // Game settings endpoints - only accessible by admin
+  const isAdmin = (req: Request, res: Response, next: Function) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "You need to be logged in to access this resource" });
+    }
+    if (req.user?.username !== 'GM') {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    next();
+  };
+  
+  // Get all game settings
+  app.get('/api/settings', isAuthenticated, async (req, res) => {
+    try {
+      const settings = await storage.getAllGameSettings();
+      res.json(settings);
+    } catch (error) {
+      console.error('Error fetching game settings:', error);
+      res.status(500).json({ error: 'Failed to fetch game settings' });
+    }
+  });
+  
+  // Get a specific game setting
+  app.get('/api/settings/:key', isAuthenticated, async (req, res) => {
+    try {
+      const key = req.params.key;
+      const setting = await storage.getGameSetting(key);
+      
+      if (!setting) {
+        return res.status(404).json({ error: 'Setting not found' });
+      }
+      
+      res.json(setting);
+    } catch (error) {
+      console.error('Error fetching game setting:', error);
+      res.status(500).json({ error: 'Failed to fetch game setting' });
+    }
+  });
+  
+  // Update a game setting (admin only)
+  app.put('/api/settings/:key', isAdmin, async (req, res) => {
+    try {
+      const key = req.params.key;
+      const setting = await storage.getGameSetting(key);
+      
+      if (!setting) {
+        return res.status(404).json({ error: 'Setting not found' });
+      }
+      
+      const updateData = {
+        settingValue: req.body.settingValue,
+        description: req.body.description,
+        lastModifiedBy: req.user?.id
+      };
+      
+      const updatedSetting = await storage.updateGameSetting(key, updateData);
+      res.json(updatedSetting);
+    } catch (error) {
+      console.error('Error updating game setting:', error);
+      res.status(500).json({ error: 'Failed to update game setting' });
     }
   });
 
@@ -286,6 +349,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       race: z.string().nullable(),
       feature: z.string().nullable(),
       notes: z.string().nullable(),
+      portraitImage: z.string().nullable(),
       pointsAvailable: z.number(),
       baseStats: z.any(), // Changed to any to match jsonb type
       createdAt: z.string().nullable(),

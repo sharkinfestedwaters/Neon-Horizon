@@ -59,6 +59,7 @@ interface CharacterContextProps {
   resetCharacter: () => void;
   loadCharacter: (id: number) => void;
   deleteCharacter: (id: number) => void;
+  updateCharacter: (id: number, character: Character) => Promise<void>;
 }
 
 const CharacterContext = createContext<CharacterContextProps | undefined>(undefined);
