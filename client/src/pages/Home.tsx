@@ -32,21 +32,19 @@ export default function Home() {
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  className="text-cyan-400 hover:text-cyan-300 hover:bg-cyan-900/30 flex items-center gap-1"
+                  className="text-cyan-400 hover:text-cyan-300 hover:bg-cyan-900/30 flex items-center"
                 >
-                  <UserCircle className="h-4 w-4" />
-                  <span className="hidden md:inline">Profile</span>
+                  <UserCircle className="h-4 w-4 mr-1" />
                   <ChevronDown className="h-3 w-3 opacity-50" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-48 bg-black/90 border-cyan-900">
-                <DropdownMenuLabel className="text-cyan-300">
-                  <span className="font-normal">Signed in as</span>
-                  <div className="font-medium truncate">{user?.username}</div>
+              <DropdownMenuContent align="end" className="w-44 bg-black/90 border-cyan-900">
+                <DropdownMenuLabel className="text-cyan-300 py-1">
+                  <div className="font-medium truncate text-sm">{user?.username}</div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator className="bg-cyan-900/30" />
                 <DropdownMenuItem 
-                  className="text-red-400 hover:text-red-300 focus:bg-red-900/30 cursor-pointer"
+                  className="text-red-400 hover:text-red-300 focus:bg-red-900/30 cursor-pointer py-1"
                   onClick={handleLogout}
                   disabled={logoutMutation.isPending}
                 >
