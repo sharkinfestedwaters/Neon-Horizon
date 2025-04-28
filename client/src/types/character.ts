@@ -36,6 +36,7 @@ export interface Character {
   feature: FeatureName | null;
   notes: string;
   pointsAvailable: number;
+  portraitImage?: string | null;
 }
 
 export interface StatInfo {

@@ -25,6 +25,7 @@ const initialCharacter: Character = {
   feature: null,
   notes: "",
   pointsAvailable: 5,
+  portraitImage: null,
 };
 
 // Types for database operations
@@ -38,6 +39,7 @@ interface DatabaseCharacter {
   notes: string;
   pointsAvailable: number;
   baseStats: Stats;
+  portraitImage: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -335,7 +337,8 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       feature: characterToLoad.feature as FeatureName | null,
       notes: characterToLoad.notes,
       pointsAvailable: characterToLoad.pointsAvailable,
-      baseStats: characterToLoad.baseStats
+      baseStats: characterToLoad.baseStats,
+      portraitImage: characterToLoad.portraitImage
     });
     
     setActiveCharacterId(id);
@@ -370,7 +373,22 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         saveCharacter,
         resetCharacter,
         loadCharacter,
-        deleteCharacter
+        deleteCharacter,
+        updateCharacter: async (id: number, updatedCharacter: Character) => {
+          return updateCharacterMutation.mutateAsync({ 
+            id, 
+            character: {
+              name: updatedCharacter.name,
+              level: updatedCharacter.level,
+              race: updatedCharacter.race,
+              feature: updatedCharacter.feature,
+              notes: updatedCharacter.notes,
+              pointsAvailable: updatedCharacter.pointsAvailable,
+              baseStats: updatedCharacter.baseStats,
+              portraitImage: updatedCharacter.portraitImage
+            }
+          });
+        }
       }}
     >
       {children}

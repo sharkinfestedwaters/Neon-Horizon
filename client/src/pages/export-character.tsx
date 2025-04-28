@@ -71,7 +71,13 @@ export default function ExportCharacter() {
         try {
           // Save the portrait to the character
           await updateCharacter(id, {
-            ...characterToExport,
+            name: characterToExport.name,
+            level: characterToExport.level,
+            race: characterToExport.race as RaceName | null,
+            feature: characterToExport.feature as FeatureName | null,
+            notes: characterToExport.notes,
+            pointsAvailable: characterToExport.pointsAvailable,
+            baseStats: characterToExport.baseStats,
             portraitImage: imageDataUrl
           });
           
