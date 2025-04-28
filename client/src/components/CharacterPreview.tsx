@@ -2,7 +2,7 @@ import React, { useRef, useState } from "react";
 import { useCharacter } from "@/context/CharacterContext";
 import { statAbbreviations, races } from "@/utils/characterUtils";
 import { StatName } from "@/types/character";
-import { Camera } from "lucide-react";
+import { Camera, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 
@@ -47,6 +47,16 @@ export default function CharacterPreview() {
     reader.readAsDataURL(file);
   };
   
+  // Handle portrait removal
+  const handleRemovePortrait = () => {
+    setPortraitImage(null);
+    toast({
+      title: "Portrait removed",
+      description: "Your character portrait has been removed",
+      variant: "default"
+    });
+  };
+  
   return (
     <div className="neo-border bg-[#141626] rounded-lg p-6 mt-6">
       <h2 className="font-['Orbitron'] text-xl text-[#00E5FF] mb-4 pb-2 border-b border-[#00A3FF]/30">
@@ -79,6 +89,7 @@ export default function CharacterPreview() {
               onChange={handlePortraitUpload}
             />
             
+            {/* Upload button */}
             <Button 
               variant="ghost" 
               size="icon"
@@ -92,6 +103,18 @@ export default function CharacterPreview() {
                 <Camera size={14} />
               )}
             </Button>
+            
+            {/* Remove button - only shown when there's a portrait */}
+            {character.portraitImage && (
+              <Button 
+                variant="ghost" 
+                size="icon"
+                className="absolute top-1 right-1 w-7 h-7 rounded-full bg-black/70 text-red-400 hover:bg-red-900/30 hover:text-white border border-red-500/50"
+                onClick={handleRemovePortrait}
+              >
+                <X size={14} />
+              </Button>
+            )}
           </div>
           <h3 className="font-['Orbitron'] text-lg text-white">
             {character.name || "Unnamed"}
