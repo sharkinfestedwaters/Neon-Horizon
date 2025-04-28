@@ -111,7 +111,7 @@ export default function AuthPage() {
                         type="text"
                         placeholder="Enter your username"
                         {...loginForm.register("username", { required: true })}
-                        className="bg-black/30 border-cyan-900/50"
+                        className="bg-black/30 border-cyan-900/50 text-white"
                       />
                     </div>
                     <div className="space-y-2">
@@ -121,7 +121,7 @@ export default function AuthPage() {
                         type="password"
                         placeholder="Enter your password"
                         {...loginForm.register("password", { required: true })}
-                        className="bg-black/30 border-cyan-900/50"
+                        className="bg-black/30 border-cyan-900/50 text-white"
                       />
                     </div>
                     <Button 
@@ -151,7 +151,7 @@ export default function AuthPage() {
                         type="text"
                         placeholder="Choose a username"
                         {...registerForm.register("username", { required: true })}
-                        className="bg-black/30 border-cyan-900/50"
+                        className="bg-black/30 border-cyan-900/50 text-white"
                       />
                     </div>
                     <div className="space-y-2">
@@ -161,7 +161,7 @@ export default function AuthPage() {
                         type="password"
                         placeholder="Choose a password"
                         {...registerForm.register("password", { required: true, minLength: 6 })}
-                        className="bg-black/30 border-cyan-900/50"
+                        className="bg-black/30 border-cyan-900/50 text-white"
                       />
                     </div>
                     <Button 
