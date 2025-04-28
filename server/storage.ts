@@ -1,6 +1,8 @@
 import { 
   users, type User, type InsertUser,
-  characters, type Character, type InsertCharacter, type UpdateCharacter
+  characters, type Character, type InsertCharacter, type UpdateCharacter,
+  userProfiles, type UserProfile, type InsertUserProfile, type UpdateUserProfile,
+  gameSettings, type GameSetting, type InsertGameSetting, type UpdateGameSetting
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc } from "drizzle-orm";
@@ -17,6 +19,16 @@ export interface IStorage {
   createCharacter(character: InsertCharacter): Promise<Character>;
   updateCharacter(id: number, character: UpdateCharacter): Promise<Character | undefined>;
   deleteCharacter(id: number): Promise<boolean>;
+  
+  // User profile methods
+  getUserProfile(userId: number): Promise<UserProfile | undefined>;
+  createUserProfile(profile: InsertUserProfile): Promise<UserProfile>;
+  updateUserProfile(userId: number, profile: UpdateUserProfile): Promise<UserProfile | undefined>;
+  
+  // Game settings methods
+  getGameSetting(key: string): Promise<GameSetting | undefined>;
+  getAllGameSettings(): Promise<GameSetting[]>;
+  updateGameSetting(key: string, value: UpdateGameSetting): Promise<GameSetting | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -81,6 +93,54 @@ export class DatabaseStorage implements IStorage {
     const result = await db.delete(characters).where(eq(characters.id, id));
     return true; // If no error was thrown, the deletion was successful
   }
+  
+  // User profile methods
+  async getUserProfile(userId: number): Promise<UserProfile | undefined> {
+    const [profile] = await db.select().from(userProfiles).where(eq(userProfiles.userId, userId));
+    return profile;
+  }
+  
+  async createUserProfile(profile: InsertUserProfile): Promise<UserProfile> {
+    const [newProfile] = await db
+      .insert(userProfiles)
+      .values(profile)
+      .returning();
+    return newProfile;
+  }
+  
+  async updateUserProfile(userId: number, profile: UpdateUserProfile): Promise<UserProfile | undefined> {
+    const [updatedProfile] = await db
+      .update(userProfiles)
+      .set({
+        ...profile,
+        updatedAt: new Date()
+      })
+      .where(eq(userProfiles.userId, userId))
+      .returning();
+    return updatedProfile;
+  }
+  
+  // Game settings methods
+  async getGameSetting(key: string): Promise<GameSetting | undefined> {
+    const [setting] = await db.select().from(gameSettings).where(eq(gameSettings.settingKey, key));
+    return setting;
+  }
+  
+  async getAllGameSettings(): Promise<GameSetting[]> {
+    return db.select().from(gameSettings);
+  }
+  
+  async updateGameSetting(key: string, value: UpdateGameSetting): Promise<GameSetting | undefined> {
+    const [updatedSetting] = await db
+      .update(gameSettings)
+      .set({
+        ...value,
+        updatedAt: new Date()
+      })
+      .where(eq(gameSettings.settingKey, key))
+      .returning();
+    return updatedSetting;
+  }
 }
 
 // For backward compatibility, keep the MemStorage class
@@ -143,6 +203,7 @@ export class MemStorage implements IStorage {
       race: characterData.race || null,
       feature: characterData.feature || null,
       notes: characterData.notes || "",
+      portraitImage: characterData.portraitImage || null,
       pointsAvailable: characterData.pointsAvailable || 5,
       baseStats: characterData.baseStats,
       createdAt: now,
@@ -169,6 +230,54 @@ export class MemStorage implements IStorage {
 
   async deleteCharacter(id: number): Promise<boolean> {
     return this.characters.delete(id);
+  }
+  
+  // User profile methods
+  async getUserProfile(userId: number): Promise<UserProfile | undefined> {
+    // Mock implementation
+    return undefined;
+  }
+  
+  async createUserProfile(profile: InsertUserProfile): Promise<UserProfile> {
+    // Mock implementation
+    return {
+      id: 1,
+      userId: profile.userId,
+      displayName: profile.displayName || null,
+      profileImage: profile.profileImage || null,
+      bio: profile.bio || null,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+  }
+  
+  async updateUserProfile(userId: number, profile: UpdateUserProfile): Promise<UserProfile | undefined> {
+    // Mock implementation
+    return {
+      id: 1,
+      userId,
+      displayName: profile.displayName || null,
+      profileImage: profile.profileImage || null,
+      bio: profile.bio || null,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+  }
+  
+  // Game settings methods
+  async getGameSetting(key: string): Promise<GameSetting | undefined> {
+    // Mock implementation
+    return undefined;
+  }
+  
+  async getAllGameSettings(): Promise<GameSetting[]> {
+    // Mock implementation
+    return [];
+  }
+  
+  async updateGameSetting(key: string, value: UpdateGameSetting): Promise<GameSetting | undefined> {
+    // Mock implementation
+    return undefined;
   }
 }
 
