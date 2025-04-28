@@ -82,6 +82,7 @@ export default function ExportCharacter() {
           });
           
           setPortraitImage(imageDataUrl);
+          setContextPortraitImage(imageDataUrl);
           toast({
             title: "Portrait updated",
             description: "Your character portrait has been set",
