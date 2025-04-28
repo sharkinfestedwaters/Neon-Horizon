@@ -20,7 +20,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Trash2, Edit, Plus, Download, Share2, MoreHorizontal } from "lucide-react";
+import { Trash2, Edit, Plus, Download, Share2, MoreHorizontal, Camera } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Character } from "@shared/schema";
 
@@ -254,15 +254,27 @@ export default function CharacterList() {
         {[1, 2, 3].map((i) => (
           <Card key={i} className="bg-black/20 border-cyan-800/50">
             <CardHeader className="pb-2">
-              <Skeleton className="h-5 w-36 bg-cyan-900/30" />
-              <Skeleton className="h-4 w-24 bg-cyan-900/20" />
+              <div className="flex justify-between items-start">
+                <div className="flex-1">
+                  <Skeleton className="h-5 w-36 bg-cyan-900/30" />
+                  <Skeleton className="h-4 w-24 bg-cyan-900/20 mt-1" />
+                </div>
+                <div className="flex flex-col items-end">
+                  <Skeleton className="h-5 w-16 bg-cyan-900/30 mb-2" />
+                  <Skeleton className="h-12 w-12 rounded-full bg-cyan-900/20" />
+                </div>
+              </div>
             </CardHeader>
             <CardContent className="pb-2">
               <Skeleton className="h-4 w-full bg-cyan-900/20" />
+              <Skeleton className="h-3 w-32 bg-cyan-900/10 mt-2" />
             </CardContent>
             <CardFooter>
               <Skeleton className="h-8 w-16 mr-2 bg-cyan-900/30" />
-              <Skeleton className="h-8 w-16 bg-cyan-900/30" />
+              <div className="flex space-x-1">
+                <Skeleton className="h-8 w-16 bg-cyan-900/30" />
+                <Skeleton className="h-8 w-16 bg-cyan-900/30" />
+              </div>
             </CardFooter>
           </Card>
         ))}
@@ -327,16 +339,35 @@ export default function CharacterList() {
             `}
           >
             <CardHeader className="pb-2">
-              <div className="flex justify-between">
-                <CardTitle className="text-cyan-400">{character.name}</CardTitle>
-                <Badge variant="outline" className="text-cyan-300 border-cyan-700 bg-cyan-950/50">
-                  Level {character.level}
-                </Badge>
+              <div className="flex justify-between items-start">
+                <div className="flex-1">
+                  <CardTitle className="text-cyan-400">{character.name}</CardTitle>
+                  <CardDescription>
+                    {character.race ? races[character.race as keyof typeof races]?.name : 'No Species'} 
+                    {character.feature ? ' • ' + character.feature.replace('-', ' ') : ''}
+                  </CardDescription>
+                </div>
+                <div className="flex flex-col items-end">
+                  <Badge variant="outline" className="text-cyan-300 border-cyan-700 bg-cyan-950/50 mb-2">
+                    Level {character.level}
+                  </Badge>
+                  
+                  {/* Character Portrait */}
+                  <div className="w-12 h-12 rounded-full bg-cyan-900/20 flex items-center justify-center border border-cyan-800/40 overflow-hidden">
+                    {character.portraitImage ? (
+                      <img 
+                        src={character.portraitImage} 
+                        alt={`${character.name} portrait`} 
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-full w-full">
+                        <Camera size={16} className="text-cyan-500/70" />
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
-              <CardDescription>
-                {character.race ? races[character.race as keyof typeof races]?.name : 'No Species'} 
-                {character.feature ? ' • ' + character.feature.replace('-', ' ') : ''}
-              </CardDescription>
             </CardHeader>
             <CardContent className="pb-2">
               <p className="text-sm text-cyan-300/70 line-clamp-1">
