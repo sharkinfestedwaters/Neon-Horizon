@@ -143,8 +143,12 @@ export function setupAuth(app: Express) {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Not authenticated" });
     }
-    // Return user but exclude password
+    // Return user but exclude password, add isAdmin flag for GM account
     const { password, ...userWithoutPassword } = req.user as Express.User;
-    res.json(userWithoutPassword);
+    const userData = {
+      ...userWithoutPassword,
+      isAdmin: userWithoutPassword.username === 'GM'
+    };
+    res.json(userData);
   });
 }
