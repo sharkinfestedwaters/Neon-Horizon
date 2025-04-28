@@ -1,10 +1,25 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertCharacterSchema, updateCharacterSchema } from "@shared/schema";
+import { insertCharacterSchema, updateCharacterSchema, Character } from "@shared/schema";
 import { setupAuth } from "./auth";
-import { WebSocketServer } from "ws";
+import { WebSocketServer, WebSocket } from "ws";
 import { z } from "zod";
+
+// Define WebSocket message types
+interface WebSocketShareMessage {
+  type: 'share-character';
+  character: Character;
+  username?: string;
+}
+
+interface WebSocketSharedMessage {
+  type: 'shared-character';
+  character: Character;
+  sharedBy?: string;
+}
+
+type WebSocketMessage = WebSocketShareMessage | WebSocketSharedMessage;
 
 // Middleware to check if a user is authenticated
 const isAuthenticated = (req: Request, res: Response, next: Function) => {
@@ -183,30 +198,114 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Create WebSocket server for real-time character sharing
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+  
+  // Create a schema for validating WebSocket messages
+  const shareMessageSchema = z.object({
+    type: z.literal('share-character'),
+    character: z.object({
+      id: z.number(),
+      name: z.string(),
+      level: z.number(),
+      // Other character fields could be validated here if needed
+    }),
+    username: z.string().optional()
+  });
 
+  // Track connected clients
+  const connectedClients = new Set<WebSocket>();
+  
   wss.on('connection', (ws) => {
+    connectedClients.add(ws);
+    
+    // Send connection acknowledgment
+    ws.send(JSON.stringify({
+      type: 'connection-established',
+      message: 'Connected to Neon Horizons sharing service'
+    }));
+    
     ws.on('message', async (message) => {
       try {
         const data = JSON.parse(message.toString());
         
-        // Handle different message types
+        // Validate share-character messages
         if (data.type === 'share-character') {
+          const result = shareMessageSchema.safeParse(data);
+          
+          if (!result.success) {
+            // Send error back to client if validation fails
+            ws.send(JSON.stringify({
+              type: 'error',
+              message: 'Invalid message format',
+              details: result.error.format()
+            }));
+            return;
+          }
+          
+          const validatedData = result.data;
+          
+          // Only share username if it's provided
+          const sharedBy = validatedData.username || 'Anonymous';
+          
           // Broadcast the character to all connected clients
+          let sharedCount = 0;
+          
           wss.clients.forEach((client) => {
-            if (client !== ws && client.readyState === ws.OPEN) {
-              client.send(JSON.stringify({
-                type: 'shared-character',
-                character: data.character,
-                sharedBy: data.username
-              }));
+            if (client !== ws && client.readyState === WebSocket.OPEN) {
+              try {
+                const sharedMessage: WebSocketSharedMessage = {
+                  type: 'shared-character',
+                  character: validatedData.character,
+                  sharedBy
+                };
+                
+                client.send(JSON.stringify(sharedMessage));
+                sharedCount++;
+              } catch (err) {
+                console.error('Error sending to client:', err);
+              }
             }
           });
+          
+          // Acknowledge receipt to sender
+          ws.send(JSON.stringify({
+            type: 'share-confirmed',
+            message: `Character "${validatedData.character.name}" shared with ${sharedCount} user${sharedCount !== 1 ? 's' : ''}`
+          }));
         }
       } catch (error) {
-        console.error('WebSocket error:', error);
+        console.error('WebSocket message processing error:', error);
+        
+        // Send error back to client
+        try {
+          ws.send(JSON.stringify({
+            type: 'error',
+            message: 'Failed to process message'
+          }));
+        } catch (sendError) {
+          console.error('Error sending error response:', sendError);
+        }
       }
     });
+    
+    // Handle disconnections
+    ws.on('close', () => {
+      connectedClients.delete(ws);
+    });
+    
+    ws.on('error', (error) => {
+      console.error('WebSocket client error:', error);
+      connectedClients.delete(ws);
+    });
   });
+  
+  // Periodically cleanup dead connections
+  setInterval(() => {
+    wss.clients.forEach(client => {
+      if (client.readyState !== WebSocket.OPEN) {
+        connectedClients.delete(client);
+      }
+    });
+  }, 30000); // Check every 30 seconds
 
   return httpServer;
 }

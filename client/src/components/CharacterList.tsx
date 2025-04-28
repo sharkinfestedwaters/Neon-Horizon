@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Trash2, Edit, Plus, Download, Share2, MoreHorizontal } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Character } from "@shared/schema";
 
 export default function CharacterList() {
   const { 
@@ -42,49 +43,130 @@ export default function CharacterList() {
     // Only initialize WebSocket if the user is logged in
     if (!user) return;
     
-    try {
-      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const wsUrl = `${protocol}//${window.location.host}/ws`;
-      
-      const socket = new WebSocket(wsUrl);
-      
-      socket.addEventListener('open', () => {
-        console.log('WebSocket connection established');
-        setWsConnection(socket);
-      });
-      
-      socket.addEventListener('message', (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          
-          if (data.type === 'shared-character') {
-            toast({
-              title: "Character Shared",
-              description: `${data.sharedBy} shared character "${data.character.name}"`,
-            });
+    // Connection management variables
+    let socket: WebSocket | null = null;
+    let reconnectAttempts = 0;
+    let reconnectTimeout: NodeJS.Timeout | null = null;
+    const MAX_RECONNECT_ATTEMPTS = 5;
+    
+    // Create WebSocket connection function
+    const connectWebSocket = () => {
+      try {
+        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        const wsUrl = `${protocol}//${window.location.host}/ws`;
+        
+        socket = new WebSocket(wsUrl);
+        
+        socket.addEventListener('open', () => {
+          reconnectAttempts = 0; // Reset reconnect attempts on successful connection
+          setWsConnection(socket);
+        });
+        
+        // Define WebSocket received message interface
+        interface WebSocketReceivedMessage {
+          type: string;
+          sharedBy?: string;
+          character?: Character;
+          message?: string;
+          details?: any;
+        }
+        
+        socket.addEventListener('message', (event) => {
+          try {
+            const data = JSON.parse(event.data) as WebSocketReceivedMessage;
+            
+            switch (data.type) {
+              case 'shared-character':
+                if (data.sharedBy && data.character) {
+                  toast({
+                    title: "Character Shared",
+                    description: `${data.sharedBy} shared character "${data.character.name}"`,
+                  });
+                  
+                  // You could potentially add UI to import the shared character
+                  // or auto-import it to the user's collection
+                }
+                break;
+                
+              case 'connection-established':
+                console.log('WebSocket service message:', data.message);
+                break;
+                
+              case 'share-confirmed':
+                // Optional: show a more detailed confirmation if needed
+                console.log('Share confirmed:', data.message);
+                break;
+                
+              case 'error':
+                console.error('WebSocket error from server:', data.message, data.details);
+                toast({
+                  title: "Sharing Error",
+                  description: data.message || "Error occurred while sharing",
+                  variant: "destructive",
+                });
+                break;
+                
+              default:
+                console.log('Unknown message type received:', data.type);
+            }
+          } catch (error) {
+            console.error('Failed to parse WebSocket message:', error);
           }
-        } catch (error) {
-          console.error('Failed to parse WebSocket message:', error);
-        }
-      });
+        });
+        
+        socket.addEventListener('close', (event) => {
+          setWsConnection(null);
+          
+          // Only attempt to reconnect if not a normal closure and user is still logged in
+          if (event.code !== 1000 && user) {
+            handleReconnect();
+          }
+        });
+        
+        socket.addEventListener('error', () => {
+          // Error handling is done in the close event
+          if (socket) socket.close();
+        });
+      } catch (error) {
+        console.error('Error initializing WebSocket:', error);
+        handleReconnect();
+      }
+    };
+    
+    // Handle reconnection with exponential backoff
+    const handleReconnect = () => {
+      if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+        toast({
+          title: "Connection Error",
+          description: "Unable to connect to sharing service after multiple attempts",
+          variant: "destructive",
+        });
+        return;
+      }
       
-      socket.addEventListener('close', () => {
-        console.log('WebSocket connection closed');
-        setWsConnection(null);
-      });
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+      }
       
-      socket.addEventListener('error', (error) => {
-        console.error('WebSocket error:', error);
-      });
+      const delay = Math.min(1000 * (2 ** reconnectAttempts), 30000); // Exponential backoff with max 30s
+      reconnectAttempts++;
       
-      return () => {
-        if (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING) {
-          socket.close();
-        }
-      };
-    } catch (error) {
-      console.error('Error initializing WebSocket:', error);
-    }
+      reconnectTimeout = setTimeout(connectWebSocket, delay);
+    };
+    
+    // Initial connection
+    connectWebSocket();
+    
+    // Cleanup function
+    return () => {
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+      }
+      
+      if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
+        socket.close(1000, "Component unmounting");
+      }
+    };
   }, [toast, user]);
 
   // Function to export character as PDF
@@ -92,8 +174,15 @@ export default function CharacterList() {
     navigate(`/export-character/${characterId}`);
   };
 
+  // Define an interface for WebSocket messages
+  interface WebSocketShareMessage {
+    type: 'share-character';
+    character: Character;
+    username: string | undefined;
+  }
+  
   // Function to share character via WebSocket
-  const shareCharacter = (character: any) => {
+  const shareCharacter = (character: Character) => {
     if (!wsConnection || wsConnection.readyState !== WebSocket.OPEN) {
       toast({
         title: "Connection Error",
@@ -103,11 +192,13 @@ export default function CharacterList() {
       return;
     }
     
-    wsConnection.send(JSON.stringify({
+    const message: WebSocketShareMessage = {
       type: 'share-character',
       character,
       username: user?.username
-    }));
+    };
+    
+    wsConnection.send(JSON.stringify(message));
     
     toast({
       title: "Character Shared",
