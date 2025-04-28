@@ -10,13 +10,13 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { races, features, statAbbreviations } from "@/utils/characterUtils";
 import { Download, ArrowLeft, Camera, Upload } from "lucide-react";
 import html2canvas from "html2canvas";
-import { StatName } from "@/types/character";
+import { StatName, Character, RaceName, FeatureName } from "@/types/character";
 import { useToast } from "@/hooks/use-toast";
 
 export default function ExportCharacter() {
   const params = useParams<{ id: string }>();
   const [, navigate] = useLocation();
-  const { characters, loadCharacter, updateCharacter } = useCharacter();
+  const { characters, loadCharacter, updateCharacter, setPortraitImage: setContextPortraitImage } = useCharacter();
   const { character, totalStats } = useCharacter();
   const { user } = useAuth();
   const { toast } = useToast();

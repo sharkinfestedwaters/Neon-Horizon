@@ -52,6 +52,7 @@ interface CharacterContextProps {
   activeCharacterId: number | null;
   setName: (name: string) => void;
   setNotes: (notes: string) => void;
+  setPortraitImage: (imageUrl: string | null) => void;
   incrementStat: (stat: StatName) => void;
   decrementStat: (stat: StatName) => void;
   selectRace: (race: RaceName | null) => void;
@@ -177,6 +178,10 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const setNotes = (notes: string) => {
     setCharacter(prev => ({ ...prev, notes }));
   };
+  
+  const setPortraitImage = (imageUrl: string | null) => {
+    setCharacter(prev => ({ ...prev, portraitImage: imageUrl }));
+  };
 
   const incrementStat = (stat: StatName) => {
     if (character.pointsAvailable <= 0) {
@@ -292,7 +297,8 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           feature: character.feature,
           notes: character.notes,
           pointsAvailable: character.pointsAvailable,
-          baseStats: character.baseStats
+          baseStats: character.baseStats,
+          portraitImage: character.portraitImage
         }
       });
     } else {
@@ -304,7 +310,8 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         feature: character.feature,
         notes: character.notes,
         pointsAvailable: character.pointsAvailable,
-        baseStats: character.baseStats
+        baseStats: character.baseStats,
+        portraitImage: character.portraitImage
       });
     }
   };
@@ -365,6 +372,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         activeCharacterId,
         setName,
         setNotes,
+        setPortraitImage,
         incrementStat,
         decrementStat,
         selectRace,
