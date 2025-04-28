@@ -273,6 +273,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   onlineUsers.setWebSocketServer(wss);
   
   // Create a schema for validating WebSocket messages
+  // Include type from Character schema
+  type CharacterType = typeof import('@shared/schema').characters.$inferSelect;
+  
   const shareMessageSchema = z.object({
     type: z.literal('share-character'),
     character: z.object({
@@ -284,10 +287,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       feature: z.string().nullable(),
       notes: z.string().nullable(),
       pointsAvailable: z.number(),
-      baseStats: z.unknown(),
+      baseStats: z.any(), // Changed to any to match jsonb type
       createdAt: z.string().nullable(),
       updatedAt: z.string().nullable()
-    }),
+    }) as z.ZodType<CharacterType>, // Cast to proper Character type
     username: z.string().optional()
   });
   
@@ -371,9 +374,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           wss.clients.forEach((client) => {
             if (client !== ws && client.readyState === WebSocket.OPEN) {
               try {
+                // Create a properly typed copy of the character with baseStats guaranteed
+                const characterToShare = {
+                  ...validatedData.character,
+                  baseStats: validatedData.character.baseStats || {}
+                };
+                
                 const sharedMessage: WebSocketSharedMessage = {
                   type: 'shared-character',
-                  character: validatedData.character,
+                  character: characterToShare,
                   sharedBy
                 };
                 
